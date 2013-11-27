@@ -50,6 +50,7 @@ EXPORT_SYMBOL(page_to_nid);
 static void set_section_nid(unsigned long section_nr, int nid)
 {
 	section_to_node_table[section_nr] = nid;
+	/*j section_nr 에 대한 nid 설정 */
 }
 #else /* !NODE_NOT_IN_PAGE_FLAGS */
 static inline void set_section_nid(unsigned long section_nr, int nid)
@@ -78,6 +79,7 @@ static struct mem_section noinline __init_refok *sparse_index_alloc(int nid)
 		 * bootmem영역에서 mem_section 포인터 배열이 가리키는 
 		 * mem_section배열의 8byte짜리 512개의 공간을 할당받는다.(8 * 512 = 4k)
 		 */
+		/*j nid 노드로부터 array_size(4096)의 boot memory을 할당한다 */
 	}
 
 	return section;
@@ -196,11 +198,15 @@ void __init memory_present(int nid, unsigned long start, unsigned long end)
 	mminit_validate_memmodel_limits(&start, &end);
 	/*! 20131116 start 주소의 range check */
 	for (pfn = start; pfn < end; pfn += PAGES_PER_SECTION) {
+		/*j SECTION SIZE = 256M = 0x10000000
+		 *  PAGES_PER_SECTION = 256M / 4K = 65536 = 0x10000
+		 */
 		unsigned long section = pfn_to_section_nr(pfn);
 		/*! 20131116 pfn에 대한 section 번호 (0~15 중 하나), 2~A까지 8개 */
 		struct mem_section *ms;
 
 		sparse_index_init(section, nid);
+		/*j struct mem_section 배열을 위한 메모리 할당해서 mem_section[]에 설정 */
 		set_section_nid(section, nid);
 
 		ms = __nr_to_section(section);

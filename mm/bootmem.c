@@ -588,6 +588,8 @@ static void * __init alloc_bootmem_bdata(struct bootmem_data *bdata,
 		 * catch the fallback below.
 		 */
 		fallback = sidx + 1;
+		/*j sidx가 0부터 시작하기 때문에 +1해서 fallback 값에 저장,
+		 * fallback > 0 이상 값을 체크하기 때문, 이후 -1하여 값 사용 */
 		sidx = align_idx(bdata, bdata->hint_idx, step);
 	}
 
@@ -609,9 +611,11 @@ find_block:
 			/*! 20131116 address range를 벗어나면 정지 */
 			break;
 
+		/*j sidx ~ eidx 까지 모두 free인지 체크 */
 		for (i = sidx; i < eidx; i++)
 			if (test_bit(i, bdata->node_bootmem_map)) {
 			/*! 20131116 addr로부터 nr번째의 bit가 1 인 경우 */
+			/*j 0 : free, 1 : reserve */
 				sidx = align_idx(bdata, i, step);
 				if (sidx == i)
 					sidx += step;
@@ -623,6 +627,8 @@ find_block:
 
 		if (bdata->last_end_off & (PAGE_SIZE - 1) &&
 				PFN_DOWN(bdata->last_end_off) + 1 == sidx)
+			/*j last_end_off가 PAGE_SIZE align이 아니고,
+			 *  last_end_off 속한 page의 next page가 free page일때(sidx) */
 			start_off = align_off(bdata, bdata->last_end_off, align);
 			/*! 20131116 bdata를 PHYS_PFN 으로 변환한 후 align */
 		else
@@ -636,7 +642,7 @@ find_block:
 		bdata->last_end_off = end_off;
 		bdata->hint_idx = PFN_UP(end_off);
 		/*! 20131116
-		 * last_end_off: 마지막으로 사용한 주소
+		 * last_end_off: 마지막으로 사용한 주소 (byte 단위)
 		 * hint_idx: last_end_off가 속한 PFN의 다음 번호
 		 */
 
@@ -647,6 +653,8 @@ find_block:
 				PFN_UP(end_off), BOOTMEM_EXCLUSIVE))
 		/*! 20131116 해당 page의 bitmap을 reserve(1)으로 만든다. */
 		/*! 20131116 merge: 한페이지 안에서 또 메모리를 할당한다는 의미 */
+		/*j start_off + size 가 start_off의 page에 속하면, 
+		 *  이 page는 reserve된 상태이기 때문에 0을 리턴함 */
 			BUG();
 
 		region = phys_to_virt(PFN_PHYS(bdata->node_min_pfn) +

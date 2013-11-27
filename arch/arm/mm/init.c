@@ -335,6 +335,8 @@ static void __init arm_memory_present(void)
 	struct memblock_region *reg;
 
 	for_each_memblock(memory, reg)
+		/*j base_pfn=0x20000, end_pfn=0xA0000 
+		 *  memblock.memory 영역에 대해서 struct mem_section에 PRESENT 정보 설정 */
 		memory_present(0, memblock_region_memory_base_pfn(reg),
 			       memblock_region_memory_end_pfn(reg));
 }

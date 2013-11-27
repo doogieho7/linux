@@ -29,8 +29,13 @@ ENTRY(_find_first_zero_bit_le)
  ARM(		ldrb	r3, [r0, r2, lsr #3]	)
  THUMB(		lsr	r3, r2, #3		)
  THUMB(		ldrb	r3, [r0, r3]		)
+ /*j r2 >> 3 : bitmap을 byte배열로 생각할 경우 배열의 index */
 		eors	r3, r3, #0xff		@ invert bits
+		/*j r3 == 0,    결과 0xff, 
+		 *  r3 == 0xff, 결과 0x0, 
+		 *  r3 > 0,     결과 > 0 */
 		bne	.L_found		@ any now set - found zero bit
+		/*j r3 == 0xff 일경우, 즉 모두 reserved된 상태일 경우 여기 실행됨 */
 		add	r2, r2, #8		@ next bit pointer
 2:		cmp	r2, r1			@ any more?
 		blo	1b
@@ -45,11 +50,16 @@ ENDPROC(_find_first_zero_bit_le)
 /*! 20131116 find_next_zero_bit(bdata->node_bootmem_map, midx, sidx); */
 ENTRY(_find_next_zero_bit_le)
 		teq	r1, #0
+		/*j TEQ(exclusive or) = r1 ^ #0
+		 *  r1 == 0, z flag 세팅됨 */
 		beq	3b
-		/*! 20131116 r1(bitmap) 이 0이면 return */
+		/*! 20131116 r1(midx) 이 0이면 return */
 		ands	ip, r2, #7
-		/*! 20131116 0, 8, 16 인 경우에는 위쪽으로 jump */
+		/*j r2 >> 3 : bitmap을 byte배열로 생각할 경우 배열의 index 
+		 *  r2 & #7 : byte값에서 bit offset */
 		beq	1b			@ If new byte, goto old routine
+		/*! 20131116 0, 8, 16 인 경우에는 위쪽으로 jump */
+		/*j sidx가 8 align이면, 즉 8의 배수일 경우 */
  ARM(		ldrb	r3, [r0, r2, lsr #3]	)
  THUMB(		lsr	r3, r2, #3		)
  THUMB(		ldrb	r3, [r0, r3]		)
@@ -59,6 +69,7 @@ ENTRY(_find_next_zero_bit_le)
 		/*! 20131116 0이 나타나는 첫번째 위치offset 리턴 */
 		orr	r2, r2, #7		@ if zero, then no bits here
 		add	r2, r2, #1		@ align bit pointer
+		/*j r2 값을 8 align시킨다 */
 		b	2b			@ loop for next bit
 ENDPROC(_find_next_zero_bit_le)
 
@@ -186,7 +197,9 @@ ENDPROC(_find_next_bit_be)
 		/*! 20131116 r3: 31bit에서 시작하여 첫번째로 1을 만나는 위치값 */
 		rsb	r3, r3, #31
 		/*! 20131116 r3 = 31 - r3 */
+		/*j 여기까지 실행하면, LSB로부터 최초 1로 시작하는 bit의 index(0~31)가 계산됨 */
 		add	r0, r2, r3
+		/*j r0 = free page의 index */
 #else
 		tst	r3, #0x0f
 		addeq	r2, r2, #4

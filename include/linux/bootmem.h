@@ -113,6 +113,7 @@ extern void *__alloc_bootmem_low_node(pg_data_t *pgdat,
 #else
 #define BOOTMEM_LOW_LIMIT __pa(MAX_DMA_ADDRESS)
 /*! 20131116 MAX_DMA_ADDRESS: 0xffffffffUL */
+/*j _pa(MAX_DMA_ADDRESS) = (0xFFFFFFFF-0xC0000000+0x20000000) = 0x5FFFFFFF */
 #endif
 
 #define alloc_bootmem(x) \
@@ -127,7 +128,7 @@ extern void *__alloc_bootmem_low_node(pg_data_t *pgdat,
 	__alloc_bootmem_nopanic(x, PAGE_SIZE, BOOTMEM_LOW_LIMIT)
 #define alloc_bootmem_node(pgdat, x) \
 	__alloc_bootmem_node(pgdat, x, SMP_CACHE_BYTES, BOOTMEM_LOW_LIMIT)
-	/*! 20131116 SMP_CACHE_BYTES: 64, BOOTMEM_LOW_LIMIT: 0x60000000 */
+	/*! 20131116 SMP_CACHE_BYTES: 64, BOOTMEM_LOW_LIMIT: 0x5FFFFFFF */
 #define alloc_bootmem_node_nopanic(pgdat, x) \
 	__alloc_bootmem_node_nopanic(pgdat, x, SMP_CACHE_BYTES, BOOTMEM_LOW_LIMIT)
 #define alloc_bootmem_pages_node(pgdat, x) \
