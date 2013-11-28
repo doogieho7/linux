@@ -112,12 +112,14 @@ extern void *__alloc_bootmem_low_node(pg_data_t *pgdat,
 #define BOOTMEM_LOW_LIMIT 0
 #else
 #define BOOTMEM_LOW_LIMIT __pa(MAX_DMA_ADDRESS)
-/*! 20131116 MAX_DMA_ADDRESS: 0xffffffffUL */
+/*! 20131116 MAX_DMA_ADDRESS: 0xffffffffUL, BOOTMEM_LOW_LIMIT: 0x5fffffffUL */
 /*j _pa(MAX_DMA_ADDRESS) = (0xFFFFFFFF-0xC0000000+0x20000000) = 0x5FFFFFFF */
 #endif
 
 #define alloc_bootmem(x) \
 	__alloc_bootmem(x, SMP_CACHE_BYTES, BOOTMEM_LOW_LIMIT)
+/*! 20131123 SMP_CACHE_BYTES: 64, BOOTMEM_LOW_LIMIT: 0x5fffffffUL */
+/*! 20131123 boot_mem 에서 넘어온 크기만큼의 메모리를 할당한다 */
 #define alloc_bootmem_align(x, align) \
 	__alloc_bootmem(x, align, BOOTMEM_LOW_LIMIT)
 #define alloc_bootmem_nopanic(x) \
@@ -128,9 +130,10 @@ extern void *__alloc_bootmem_low_node(pg_data_t *pgdat,
 	__alloc_bootmem_nopanic(x, PAGE_SIZE, BOOTMEM_LOW_LIMIT)
 #define alloc_bootmem_node(pgdat, x) \
 	__alloc_bootmem_node(pgdat, x, SMP_CACHE_BYTES, BOOTMEM_LOW_LIMIT)
-	/*! 20131116 SMP_CACHE_BYTES: 64, BOOTMEM_LOW_LIMIT: 0x5FFFFFFF */
+	/*! 20131116 SMP_CACHE_BYTES: 64, BOOTMEM_LOW_LIMIT: 0x5fffffff */
 #define alloc_bootmem_node_nopanic(pgdat, x) \
 	__alloc_bootmem_node_nopanic(pgdat, x, SMP_CACHE_BYTES, BOOTMEM_LOW_LIMIT)
+	/*! 20131123 bootmem에서 x만큼 할당한다. */
 #define alloc_bootmem_pages_node(pgdat, x) \
 	__alloc_bootmem_node(pgdat, x, PAGE_SIZE, BOOTMEM_LOW_LIMIT)
 #define alloc_bootmem_pages_node_nopanic(pgdat, x) \
@@ -150,6 +153,7 @@ extern void *alloc_remap(int nid, unsigned long size);
 #else
 static inline void *alloc_remap(int nid, unsigned long size)
 {
+	/*! 20131123 여기 실행됨 */
 	return NULL;
 }
 #endif /* CONFIG_HAVE_ARCH_ALLOC_REMAP */

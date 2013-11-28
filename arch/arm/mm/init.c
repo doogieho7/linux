@@ -335,10 +335,20 @@ static void __init arm_memory_present(void)
 	struct memblock_region *reg;
 
 	for_each_memblock(memory, reg)
+	/*! 20131123
+	 * for (region = memblock.memblock_type.regions;				\
+	 * region < (memblock.memblock_type.regions + memblock.memblock_type.cnt);	\
+	 * region++)
+	 */
 		/*j base_pfn=0x20000, end_pfn=0xA0000 
 		 *  memblock.memory 영역에 대해서 struct mem_section에 PRESENT 정보 설정 */
 		memory_present(0, memblock_region_memory_base_pfn(reg),
 			       memblock_region_memory_end_pfn(reg));
+	/*! 20131123
+	 * mem_block에 등록되어 있는 메모리 영역을 sparse로 관리할 수 있도록
+	 * sparse mem_section 단위로 존재함을 표시. (256MiB, SECTION_SIZE_BITS: 28)
+	 * (start ~ end 까지 1로 표시, 초기화를 다 한 건 아님)
+	 */
 }
 #endif
 
@@ -484,6 +494,11 @@ void __init bootmem_init(void)
 	 * so must be done after the fixed reservations
 	 */
 	arm_memory_present();
+	/*! 20131123
+	 * mem_block에 등록되어 있는 메모리 영역을 sparse로 관리할 수 있도록 
+	 * sparse mem_section 단위(256MiB)로 존재함을 표시
+	 * 0x20000000 번지 ~ 0xA0000000 번지 까지 표시
+	 */
 
 	/*
 	 * sparse_init() needs the bootmem allocator up and running.
