@@ -336,6 +336,7 @@ static void __init arm_bootmem_free(unsigned long min, unsigned long max_low,
 #endif
 
 	free_area_init_node(0, zone_size, min, zhole_size);
+	/*j 현재 우리가 분석하는 exynos5420은 hole 이 없다 */
 }
 
 #ifdef CONFIG_HAVE_ARCH_PFN_VALID
@@ -526,6 +527,9 @@ void __init bootmem_init(void)
 	 */
 	sparse_init();
 	/*! 20131130 전체 메모리 공간을 section 단위로 나누어서 존재하는 section 별 메모리존재 여부 & usemap 초기화 */
+	/*j section별로 map, usemap 초기화 
+	 *  map: struct page 배열
+	 *  usemap: 각 section의 pages에 대해서 bitmap 으로 free/used 관리 */
 
 	/*
 	 * Now free the memory - free_area_init_node needs

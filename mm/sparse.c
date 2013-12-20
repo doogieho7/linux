@@ -289,6 +289,7 @@ static int __meminit sparse_init_one_section(struct mem_section *ms,
 	 * 2013/11/23 여기까지
 	 */
  	ms->pageblock_flags = pageblock_bitmap;
+	/*j usemap(bitmap) 포인터 설정 */
 
 	return 1;
 }
@@ -511,6 +512,7 @@ static struct page __init *sparse_early_mem_map_alloc(unsigned long pnum)
 	/*! 20131123 nid(node id): 0 */
 
 	map = sparse_mem_map_populate(pnum, nid);
+	/*j strcut page[PAGES_PER_SECTION] 배열 메모리 할당 */
 	/*! 20131123 할당을 받지 못하면 물리 공간이 없는 경우. */
 	if (map)
 		return map;
@@ -570,6 +572,7 @@ void __init sparse_init(void)
 	size = sizeof(unsigned long *) * NR_MEM_SECTIONS;
 	/*! 20131123 size: 64 = 4 * 16 */
 	usemap_map = alloc_bootmem(size);
+	/*j usemap_map : usemap 포인터을 담을 배열 (section 번호을 index로 사용) */
 	if (!usemap_map)
 		panic("can not allocate usemap_map\n");
 	/*! 20131123 size만큼의 메모리를 bootmem으로부터 할당받음, 실패시 panic 발생 */
@@ -579,6 +582,7 @@ void __init sparse_init(void)
 
 		if (!present_section_nr(pnum))
 		/*! 20131123 mem_section[pnum] 에 해당하는 section이 없으면 continue */
+		/*j pnum index의 section이 PRESENT 로 mark되어있지 않으면 */
 			continue;
 		ms = __nr_to_section(pnum);
 		/*! 20131123 mem_section[pnum]에 해당하는 주소 리턴 */
@@ -697,6 +701,7 @@ void __init sparse_init(void)
 #endif
 	free_bootmem(__pa(usemap_map), size);
 	/*! 20131130 이중포인터로 할당된 공간을 해제한다. */
+	/*j struct mem_section 에 usemap이 설정되었기 때문에 여기서 해제 */
 }
 
 #ifdef CONFIG_MEMORY_HOTPLUG

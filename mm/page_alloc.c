@@ -4555,6 +4555,8 @@ static void __meminit calculate_node_totalpages(struct pglist_data *pgdat,
 	pgdat->node_present_pages = realtotalpages;
 	printk(KERN_DEBUG "On node %d totalpages: %lu\n", pgdat->node_id,
 							realtotalpages);
+	/*j 현재 분석하는 exynos5420은 zhole이 없기 때문에
+	 *  node_spanned_pages == node_present_pages 는 같다 */
 }
 
 #ifndef CONFIG_SPARSEMEM
@@ -4700,6 +4702,8 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat,
 								node_end_pfn,
 								zholes_size);
 		/*! 20131130 현재 zone 의 실제 사용가능한 size 계산(hole 뺀 page 갯수) */
+		/*j size = zone의 page개수, realsize = size - hole 
+		 *  exynos5420은 hole이 없기 때문에 size, realsize 같다. */
 
 		/*
 		 * Adjust freesize so that it accounts for how much memory
@@ -4783,6 +4787,8 @@ static void __init_refok alloc_node_mem_map(struct pglist_data *pgdat)
 		return;
 	/*! 20131130 node_spanned_pages 가 초기화 안된 경우 리턴, 설정에 따라 아무일도 안함 */
 
+	/*j CONFIG_SPARSEMEM enable된 상태이기 때문에 
+	 *  CONFIG_FLAT_NODE_MEM_MAP is not set 상태이다. */
 #ifdef CONFIG_FLAT_NODE_MEM_MAP
 	/* ia64 gets its own node_mem_map, before this, without bootmem */
 	if (!pgdat->node_mem_map) {

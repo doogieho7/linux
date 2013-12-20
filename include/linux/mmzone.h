@@ -1079,7 +1079,7 @@ static inline unsigned long early_pfn_to_nid(unsigned long pfn)
 
 #define SECTION_BLOCKFLAGS_BITS \
 	((1UL << (PFN_SECTION_SHIFT - pageblock_order)) * NR_PAGEBLOCK_BITS)
-/*! 20131123 PFN_SECTION_SHIFT: (1UL << (16 - 10)) * 4 = 256 */
+/*! 20131123 SECTION_BLOCKFLAGS_BITS: (1UL << (16 - 10)) * 4 = 256 */
 
 #if (MAX_ORDER - 1 + PAGE_SHIFT) > SECTION_SIZE_BITS
 #error Allocator MAX_ORDER exceeds SECTION_SIZE
