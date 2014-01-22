@@ -73,6 +73,11 @@
  * __sec에 현재 pfn의 mem_section 주소가 담긴다.
  * __sec에 해당하는 struct page 배열의 시작 주소를 return
  */
+/*j struct mem_section 별로 section_mem_map (struct page[])을 갖는다.
+ *  index는 0부터 시작이기 때문에, pfn을 각 section의 index 0기준으로 계산해 줘야 하나
+ *  sparse_encode_mem_map()함수에서 아래와 encode해서 section_mem_map 변수을 설정하기 때문에
+ *  +pfn 해서 바로 사용할 수 있다.
+ *             return (unsigned long)(mem_map - (section_nr_to_pfn(pnum))); */
 #endif /* CONFIG_FLATMEM/DISCONTIGMEM/SPARSEMEM */
 
 #define page_to_pfn __page_to_pfn

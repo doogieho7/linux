@@ -230,6 +230,16 @@ static inline unsigned int __attribute_const__ read_cpuid_mpidr(void)
 	 * CPU2: mpidr 80000002
 	 * CPU3: mpidr 80000003 
 	 */
+	/*j KFC : cluster id 1
+	 *  EGL : cluster id 0
+	 *  ex) HMP 6core (litte 4, big 2)
+	 *  CPU0: mpidr 80000100    - litte core
+	 *  CPU1: mpidr 80000101
+	 *  CPU2: mpidr 80000102
+	 *  CPU3: mpidr 80000103
+	 *  CPU4: mpidr 80000000    - big core
+	 *  CPU5: mpidr 80000001
+	 */
 	return read_cpuid(CPUID_MPIDR);
 }
 

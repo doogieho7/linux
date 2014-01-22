@@ -368,6 +368,16 @@ static unsigned long unflatten_dt_node(struct boot_param_header *blob,
 	 * it here from the unit name if absent
 	 */
 	/*! 20131221 DTB에 "name" property가 없을 경우 만들어준다.  */
+	/*j ex) 
+	 *		  property->name = "name"
+	 *		  property->size = 7
+	 *		  property->value = "chipid" 가 된다. (@앞에까지가 property name이 된다)
+	 *		 
+	 *		  chipid@10000000 {
+	 *		 		compatible = "samsung,exynos4210-chipid";
+	 *		 				reg = <0x10000000 0x100>;
+	 *		  };
+	 */
 	if (!has_name) {
 		char *p1 = pathp, *ps = pathp, *pa = NULL;
 		int sz;
@@ -403,6 +413,7 @@ static unsigned long unflatten_dt_node(struct boot_param_header *blob,
 		}
 	}
 	if (allnextpp) {
+		/*j 마지막 property->next = NULL 로 설정 */
 		*prev_pp = NULL;
 		/*! 20131221 name과 device_type 속성의 value(주소)를 가져와 device node에 대입 */
 		np->name = of_get_property(np, "name", NULL);
@@ -472,6 +483,7 @@ static void __unflatten_device_tree(struct boot_param_header *blob,
 	start = ((unsigned long)blob) +
 		be32_to_cpu(blob->off_dt_struct);
 	/*! 20131221 DTB를 위한 구조체 크기를 얻는다.  */
+	/*j mem = 0이면, device tree을 위한 크기가 리턴된다 */
 	size = unflatten_dt_node(blob, 0, &start, NULL, NULL, 0);
 	/*! 20131221 4-bytes align  */
 	size = (size | 3) + 1;
@@ -505,6 +517,7 @@ static void __unflatten_device_tree(struct boot_param_header *blob,
 		pr_warning("End of tree marker overwritten: %08x\n",
 			   be32_to_cpu(((__be32 *)mem)[size / 4]));
 	/*! 20131221 선형적으로 연결된 allnext의 마지막 device node->allnext는 NULL이다. */
+	/*j 마지막 struct device_node->allnext = NULL 로 설정 */
 	*allnextp = NULL;
 
 	pr_debug(" <- unflatten_device_tree()\n");
