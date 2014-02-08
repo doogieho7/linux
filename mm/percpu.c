@@ -1452,6 +1452,9 @@ static struct pcpu_alloc_info * __init pcpu_build_alloc_info(
 	static int group_cnt[NR_CPUS] __initdata;
 	const size_t static_size = __per_cpu_end - __per_cpu_start;
 	/*! 20140111 static_size : per cpu section의 크기 */
+	/*j vmlinux에서 symbol 확인시 static_size = 0x1D00 (=7424)
+	 * __per_cpu_start = 0xc04be000, __per_cpu_end = 0xc04bfd00
+	 */
 	int nr_groups = 1, nr_units = 0;
 	size_t size_sum, min_unit_size, alloc_size;
 	int upa, max_upa, uninitialized_var(best_upa);	/* units_per_alloc */
@@ -1477,6 +1480,11 @@ static struct pcpu_alloc_info * __init pcpu_build_alloc_info(
 	 * alloc_size is multiple of atom_size and is the smallest
 	 * which can accommodate 4k aligned segments which are equal to
 	 * or larger than min_unit_size.
+	 */
+	/*j 현재 size_num < PCPU_MIN_UNIT_SIZE 이기 때문에, 아래와 같이 설정됨
+	 * min_unit_size : 32k
+	 * alloc_size : 32k
+	 * upa : 1
 	 */
 	min_unit_size = max_t(size_t, size_sum, PCPU_MIN_UNIT_SIZE);
 	/*! 20140111 PCPU_MIN_UNIT_SIZE: page align된 32k */
@@ -1514,6 +1522,9 @@ static struct pcpu_alloc_info * __init pcpu_build_alloc_info(
 		group_cnt[group]++;
 	}
 	/*! 20140117 각각의 CPU가 어떤 group에 속하는지 Setting 한다. */
+	/*j cpu_distance_fn : NULL 이기 때문에, cpu가 4개라고 가정하면
+	 *  group_map[0~3] = 0, group_cnt[0] = 4
+	 *  => 모든 cpu는 group 0에 속한다 */
 
 	/*
 	 * Expand unit size until address space usage goes over 75%
@@ -1569,14 +1580,16 @@ static struct pcpu_alloc_info * __init pcpu_build_alloc_info(
 		cpu_map += roundup(group_cnt[group], upa);
 	}
 	/*! 20140118 그룹별 cpu_map의 base 주소 할당 */
+	/*j group_cnt[group] : group에 속하는 cpu 개수 */
 
-	ai->static_size = static_size;
+	ai->static_size = static_size;			/*j (__per_cpu_end - _per_cpu_start) */
 	ai->reserved_size = reserved_size;
 	ai->dyn_size = dyn_size;
 	ai->unit_size = alloc_size / upa;
 	ai->atom_size = atom_size;
 	ai->alloc_size = alloc_size;
 	/*! 20140118 alloc information 할당한다. */
+	/*j alloc_size : cpu별로 할당해야한 공간 크기, this * cpu 개수 해야함 */
 
 	for (group = 0, unit = 0; group_cnt[group]; group++) {
 		struct pcpu_group_info *gi = &ai->groups[group];
@@ -1595,6 +1608,11 @@ static struct pcpu_alloc_info * __init pcpu_build_alloc_info(
 		unit += gi->nr_units;
 		/*! 20140118 각 그룹의 cpu_map에 CPU 번호를 Setting한다. */
 	}
+	/*j pcpu_group_info 설정 한다.
+	 * nr_units : cpu 개수 (group에 속하는)
+	 * base_offset : base '0'을 기준으로 space offset, 이후 이 함수을 호출하는 쪽에서 다시 초기화 해야함
+	 * cpu_map[unit] : cpu 번호 
+	 */
 	BUG_ON(unit != nr_units);
 
 	return ai;
@@ -1682,6 +1700,7 @@ int __init pcpu_embed_first_chunk(size_t reserved_size, size_t dyn_size,
 		/* allocate space for the whole group */
 		ptr = alloc_fn(cpu, gi->nr_units * ai->unit_size, atom_size);
 		/*! 20140118 alloc_fn은 인자로 받은 pcpu_dfl_fc_alloc 함수 */
+		/*j group별로 space 할당, unit_size : 1개의 cpu을 위한 space */
 		if (!ptr) {
 			rc = -ENOMEM;
 			goto out_free_areas;
@@ -1690,10 +1709,12 @@ int __init pcpu_embed_first_chunk(size_t reserved_size, size_t dyn_size,
 		kmemleak_free(ptr);
 		/*! 20140118 메모리 누수 체크 */
 		areas[group] = ptr;
+		/* group에 대한 space 시작 주소를 areas[] 에 임시로 저장함 */
 
 		base = min(ptr, base);
 		/*! 20140118 할당한 Area의 시작주소 */
 	}
+	/*j base : 각 group을 위해 할단된 space 시작주소 중 가장 낮은 주소을 가르킴 */ 
 
 	/*
 	 * Copy data and free unused parts.  This should happen after all
@@ -1707,6 +1728,7 @@ int __init pcpu_embed_first_chunk(size_t reserved_size, size_t dyn_size,
 		for (i = 0; i < gi->nr_units; i++, ptr += ai->unit_size) {
 			if (gi->cpu_map[i] == NR_CPUS) {
 				/*! 20140118 이 unit 자체를 안 쓸 경우 free시킨다. */
+				/*j cpu_map[i] == NR_CPUS : 할당된 CPU가 없다 */
 				/* unused unit, free whole */
 				free_fn(ptr, ai->unit_size);
 				continue;
@@ -1730,6 +1752,8 @@ int __init pcpu_embed_first_chunk(size_t reserved_size, size_t dyn_size,
 	}
 	max_distance += ai->unit_size;
 	/*! 20140118 max_distance: group별 per_cpu 공간 중에서 base에서 가장 멀리 떨어진 거리 */
+	/*j max_distance는 group별 per cpu space 시작 주소중 가장 높은 주소을 가지고,
+	 *  여기에 + unit_size 을 하면 할당된 per cpu space중에세 마지막 위치를 가르키게 된다 */
 
 	/* warn if maximum distance is further than 75% of vmalloc space */
 	if (max_distance > (VMALLOC_END - VMALLOC_START) * 3 / 4) {

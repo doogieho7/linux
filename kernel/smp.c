@@ -534,6 +534,7 @@ void __init setup_nr_cpu_ids(void)
 {
 	nr_cpu_ids = find_last_bit(cpumask_bits(cpu_possible_mask),NR_CPUS) + 1;
 	/*! 20140111 nr_cpu_ids = find_last_bit(0x1111, 4) + 1 */
+	/*j cpu 6개가 지원되면, cpu_possible_mask = 0x3F -> nr_cpu_ids = 6 */
 	/*! 20140111 device tree의 값으로 CPU의 갯수를 구하여 config로 셋팅된 값을 재설정 */
 }
 

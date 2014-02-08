@@ -232,6 +232,7 @@ void __init arm_dt_init_cpu_maps(void)
 	for (i = 0; i < cpuidx; i++) {
 		set_cpu_possible(i, true);
 		/*! 20140104 __cpu_logical_map[cpu] = tmp_map[i] */
+		/*j tmp_map[i] 에는 hwid(MPIDR) 값이 들어가 있다 */
 		cpu_logical_map(i) = tmp_map[i];
 		pr_debug("cpu logical map 0x%x\n", cpu_logical_map(i));
 	}
