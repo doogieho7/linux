@@ -204,6 +204,7 @@ static int __pcpu_size_to_slot(int size)
 	/*! 20140125 fls: 31번 bit(msb)부터 찾아가며 첫번째 1이 나오는 bit의 자릿수(1~32) */
 	return max(highbit - PCPU_SLOT_BASE_SHIFT + 2, 1);
 	/*! 20140125 size가 12kb(0x3000)인 경우에 highbit:14 이므로 return 11 */
+	/*j pcp_unit_size:0x8000(32kb) 이다 -> highbit:16 이므로 return 13 */
 }
 
 static int pcpu_size_to_slot(int size)
@@ -1250,6 +1251,7 @@ int __init pcpu_setup_first_chunk(const struct pcpu_alloc_info *ai,
 #ifdef CONFIG_SMP
 	PCPU_SETUP_BUG_ON(!ai->static_size);
 	PCPU_SETUP_BUG_ON((unsigned long)__per_cpu_start & ~PAGE_MASK);
+	/*j __per_cpu_start 주소가 page align 아니면 BUG_ON */
 #endif
 	PCPU_SETUP_BUG_ON(!base_addr);
 	PCPU_SETUP_BUG_ON((unsigned long)base_addr & ~PAGE_MASK);
@@ -1266,6 +1268,7 @@ int __init pcpu_setup_first_chunk(const struct pcpu_alloc_info *ai,
 	unit_map = alloc_bootmem(nr_cpu_ids * sizeof(unit_map[0]));
 	unit_off = alloc_bootmem(nr_cpu_ids * sizeof(unit_off[0]));
 	/*! 20140125 각 변수에 메모리 할당 */
+	/*j nr_cpu_ids : cpu 전체 개수 */
 
 	for (cpu = 0; cpu < nr_cpu_ids; cpu++)
 		unit_map[cpu] = UINT_MAX;
@@ -1338,6 +1341,7 @@ int __init pcpu_setup_first_chunk(const struct pcpu_alloc_info *ai,
 	 */
 	pcpu_nr_slots = __pcpu_size_to_slot(pcpu_unit_size) + 2;
 	/*! 20140125 필요한 slot 갯수(12)보다 2개 더 할당한다.  */
+	/*j pcpu_nr_slots = 15 */
 	pcpu_slot = alloc_bootmem(pcpu_nr_slots * sizeof(pcpu_slot[0]));
 	/*! 20140125 추가한 slot을 포함하는 메모리공간 할당 */
 	for (i = 0; i < pcpu_nr_slots; i++)
@@ -1996,6 +2000,9 @@ void __init setup_per_cpu_areas(void)
 	for_each_possible_cpu(cpu)
 		__per_cpu_offset[cpu] = delta + pcpu_unit_offsets[cpu];
 	/*! 20140125 delta를 이용하여 각 cpu별 chunk의 offset을 설정한다. */
+	/*j __per_cpu_offset[cpu]이 위와 같이 설정되었기 때문에,
+	 *  pcpu space[cpu] :  __per_cpu_start + __per_cpu_offset[cpu]
+	 */
 }
 #endif	/* CONFIG_HAVE_SETUP_PER_CPU_AREA */
 
