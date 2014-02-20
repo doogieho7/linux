@@ -58,6 +58,8 @@ extern unsigned long __per_cpu_offset[NR_CPUS];
  * offset.
  */
 /*! 20140208 각 cpu별 percpu 영역에서 주어진 cpu 번호에 해당하는 var 의 주소를 반환한다 */
+/*j var 변수는 per cpu section의 위치를 가르키고 있고,
+ *  여기에 per_cpu_offset[cpu]을 더하게 되면, allocated pcpu space의 주소가 된다. */
 #define per_cpu(var, cpu) \
 	(*SHIFT_PERCPU_PTR(&(var), per_cpu_offset(cpu)))
 

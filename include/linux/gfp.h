@@ -234,6 +234,7 @@ static inline int allocflags_to_migratetype(gfp_t gfp_flags)
 	| (ZONE_MOVABLE << (___GFP_MOVABLE | ___GFP_HIGHMEM) * ZONES_SHIFT)   \ 2 << a * 2
 	| (OPT_ZONE_DMA32 << (___GFP_MOVABLE | ___GFP_DMA32) * ZONES_SHIFT)   \ 0 << c * 2
  */
+/*j 위 좌변에는 enum zone_type(ZONE_NORMAL, ZONE_HIGHMEM, ZONE_MOVABLE) 값이 들어간다 */
 #define GFP_ZONE_TABLE ( \
 	(ZONE_NORMAL << 0 * ZONES_SHIFT)				      \
 	| (OPT_ZONE_DMA << ___GFP_DMA * ZONES_SHIFT)			      \
@@ -277,6 +278,12 @@ static inline enum zone_type gfp_zone(gfp_t flags)
 	enum zone_type z;
 	int bit = (__force int) (flags & GFP_ZONEMASK);
     /*! 20140208 GFP_ZONEMASK = (__GFP_DMA|__GFP_HIGHMEM|__GFP_DMA32|__GFP_MOVABLE) */
+	/*j gfp_t의 하위 4bit(0xf)가 zone 을 나타내는 bit
+#define ___GFP_DMA		0x01u
+#define ___GFP_HIGHMEM		0x02u
+#define ___GFP_DMA32		0x04u
+#define ___GFP_MOVABLE		0x08u
+	*/
 
     /*! 20140208 (flags & 0x0f) 에 해당하는 ZONE_* 상수값을 가져온다 */
 	z = (GFP_ZONE_TABLE >> (bit * ZONES_SHIFT)) &

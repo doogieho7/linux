@@ -3685,6 +3685,13 @@ static int __build_all_zonelists(void *data)
 		 * pgdat = (&contig_page_data) = &bootmem_node_data[0]
 		 * bootmem_data_t bootmem_node_data[1] __initdata;
 		 */
+		/*j 위 주석은 잘못되었다. 
+		 * contig_page_data.bdata 변수가 &bootmem_node_data[0]로 초기화 된다.
+		 *
+		 * struct pglist_data __refdata contig_page_data = {
+		 *	.bdata = &bootmem_node_data[0]
+		 *	};
+		 */
 
 		build_zonelists(pgdat);
 		/*! 20140208 pgdat->node_zonelists 구조체를 초기화한다. */
