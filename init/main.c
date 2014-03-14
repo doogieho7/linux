@@ -409,6 +409,7 @@ static int __init do_early_param(char *param, char *val, const char *unused)
 	 * 선언은 __setup Macro로 선언되고 .init.setup 섹션에 시작과 끝만큼 
 	 * early_param  
 	 */
+	/*j early_param() 선언된 param만 early=1 로 설정된다 */
 	for (p = __setup_start; p < __setup_end; p++) {
 		if ((p->early && parameq(param, p->str)) ||
 		    (strcmp(param, "console") == 0 &&

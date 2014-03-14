@@ -5966,6 +5966,7 @@ void *__init alloc_large_system_hash(const char *tablename,
 		/* round applicable memory size up to nearest megabyte */
 		numentries = nr_kernel_pages;
 		/*! 20140222 nr_kernel_pages: normal zone(760Mb) 의 page 갯수: 194,560개보다 작다 */
+		/*j (1 << (20-12)) = 256 (=1024K / 4K) */
 		numentries += (1UL << (20 - PAGE_SHIFT)) - 1;
 		numentries >>= 20 - PAGE_SHIFT;
 		numentries <<= 20 - PAGE_SHIFT;
