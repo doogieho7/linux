@@ -53,6 +53,10 @@ void __init sort_main_extable(void)
 		 * arch/arm/mm/cache-v7.S
 		 * arch/arm/mm/extable.c
 		 */
+		/*j arch/arm/mm/cache-v7.S 에서 USER() 매크로 사용한 부분과 9001: label 참고
+		 *   => USER() 매크로가 __ex_table section에 struct exceptoin_table_entry 을 생성함
+		 */
+
 	}
 }
 

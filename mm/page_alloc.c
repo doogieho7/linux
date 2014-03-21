@@ -5976,6 +5976,8 @@ void *__init alloc_large_system_hash(const char *tablename,
 		 * 1024kb에 256개의 Page가필요함, 256 페이지 개수 단위로 Align
 		 * numentries += 255 한 후에 하위 8bit를 0으로 만듦
 		 */
+		/*j nr_kernel_pages : low memory의 free page 개수
+		 *  numentries = ALIGN(nr_kernel_pages, 256) -> 1MB 단위로 정렬 */
 
 		/* limit to 1 bucket per 2^scale bytes of low memory */
 		/*! 20140309
