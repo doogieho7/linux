@@ -215,6 +215,7 @@ static unsigned long __init free_all_bootmem_core(bootmem_data_t *bdata)
 		 */
 		vec = ~map[idx / BITS_PER_LONG];
 		/*! 20140315 idx가 속한 map의 값을 반전 */
+		/*j 0 : free, 1 : reserve */
 
 		if (shift) {
 			vec >>= shift;
@@ -266,6 +267,7 @@ static unsigned long __init free_all_bootmem_core(bootmem_data_t *bdata)
 	while (pages--)
 		__free_pages_bootmem(page++, 0);
 	/*! 20140329 bootmem의 map으로 쓰이는 부분을 buddy의 free page list에 추가한다. */
+	/*j node_bootmem_map에 할당되어 있는 page을 buddy의 free list에 추가 */
 
 	bdebug("nid=%td released=%lx\n", bdata - bootmem_node_data, count);
 

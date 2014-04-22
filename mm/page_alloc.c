@@ -468,6 +468,10 @@ static inline void rmv_page_order(struct page *page)
 	/*! 20140322 page->_mapcount = -1 (buddy로 안쓰겠다는 것)*/
 	set_page_private(page, 0);
 	/*! 20140322 page->order = 0 */
+	/*j buddy page인 경우 아래와 같이 설정되어 있고, 이것을 clear
+	 *	 page->_mapcount = PAGE_BUDDY_MAPCOUNT_VALUE(-128)	=> -1
+	 *	 page->private = order => 0 
+	 */
 }
 
 /*
@@ -595,6 +599,7 @@ static inline void __free_one_page(struct page *page,
 		/*! 20140322 page가 free 이고 buddy 인지(order가 -128인지) 체크한다. */
 		/*! 20140322 page_is_buddy: page가 buddy에 있는 free page이면 true */
 			break;
+			/*j 합칠수(combined) 없는 buddy page을 만나면 break */
 		/*
 		 * Our buddy is free or it is CONFIG_DEBUG_PAGEALLOC guard page,
 		 * merge with it and move up one order.
@@ -620,13 +625,16 @@ static inline void __free_one_page(struct page *page,
 			/*! 20140322 buddy를 안쓰겠다고 설정 */
 		}
 		combined_idx = buddy_idx & page_idx;
+		/*j page & buddy 을 합쳤을때(combined) 낮은 offset page의 index */
 		page = page + (combined_idx - page_idx);
 		page_idx = combined_idx;
 		order++;
 		/*! 20140322 buddy가 fee인 경우에는 order를 증가시킨 후 다시 반복한다. */
+		/*j 합칠수(combined)할 수 있을때 까지 계속 try */
 	}
 	set_page_order(page, order);
 	/*! 20140322 page 를 buddy 로 사용하겠다는 표시 */
+	/*j buddy page로 설정(page->_mapcount=-128)하고, page->private=order 값을 설정 */
 
 	/*
 	 * If this is not the largest possible page, check if the buddy
@@ -650,8 +658,15 @@ static inline void __free_one_page(struct page *page,
 			list_add_tail(&page->lru,
 				&zone->free_area[order].free_list[migratetype]);
 			goto out;
+			/*j higher_page : 현재 page와 buddy page을 합쳤을때(combinded)의 page
+			 *  higher_buddy : higher_page의 buddy,
+			 *  higher_buddy가 free이고, order+1 일경우 이후 merge될 가능성을 높이기 위해 
+			 *  free_list의 tail에 추가하여 최대한 늦게 사용되도록 함
+			 */
 		}
 	}
+
+	/*j 여기까지 오면, hight buddy가 free가 아니거나 같은 order가 아닌 경우이다 */
 
 	list_add(&page->lru, &zone->free_area[order].free_list[migratetype]);
 	/*! 20140322 최상위 buddy인 경우에는 list의 앞부분에 추가한다. */
@@ -681,6 +696,7 @@ static inline int free_pages_check(struct page *page)
 		 * node, zone 을 제외한 flag 부분을 모두 지운다.
 		 * 캐쉬를 고려하여 필요할 경우에만 지운다.
 		 */
+	/*j enum pageflags 관련 bit 설정되어 있으면 clear (__NR_PAGEFLAGS 까지) */
 	return 0;
 }
 
@@ -724,6 +740,8 @@ static void free_pcppages_bulk(struct zone *zone, int count,
 			list = &pcp->lists[migratetype];
 		} while (list_empty(list));
 		/*! 20140329 pcp->list의 비어있지 않은 list를 선택. */
+		/*j MIGRATE_RECLAIMABLE(1) -> MIGRATE_MOVABLE(2) -> MIGRATE_UNMOVABLE(0) 순서로 list 체크됨
+		 *  => MIGRATE_UNMOVABLE list는 항상 non empty 일걸로 생각됨 */
 
 		/* This is the only non-empty list. Free them all. */
 		if (batch_free == MIGRATE_PCPTYPES)
@@ -856,6 +874,7 @@ void __init __free_pages_bootmem(struct page *page, unsigned int order)
 			prefetchw(p + 1);
 		__ClearPageReserved(p);
 		/*! 20140315 p->flags 의 pg_reserved bit를 0으로 clear한다. */
+		/*j memmap_init_zone()에서 SetPageReserved(page) 실행해서 PG_reserved 세팅했음 */
 		set_page_count(p, 0);
 		/*! 20140315 p->_count->counter = 0 으로 set */
 	}
@@ -864,6 +883,7 @@ void __init __free_pages_bootmem(struct page *page, unsigned int order)
 	/*! 20140315 page가 속한 zone->managed_pages 갯수를 증가시킴 */
 	set_page_refcounted(page);
 	/*! 20140315 page->_count->counter = 0 으로 set */
+	/*j 위 주석 잘못되었음 =>  page->_count = 1로 설정 */
 	__free_pages(page, order);
 	/*! 20140329 현재 page를 order 승수의 buddy free list 에 추가한다. */
 }
@@ -1426,6 +1446,7 @@ void free_hot_cold_page(struct page *page, int cold)
 	migratetype = get_pageblock_migratetype(page);
 	set_freepage_migratetype(page, migratetype);
 	/*! 20140329 page가 속한 page group의 pageblock bit의 migratetype flag 가져와서 page에 셋팅 */
+	/*j page->index = migratetype 이 설정됨 */
 	local_irq_save(flags);
 	/*! 20140329 cpsr의 irq 관련된 내용을 flags 변수에 저장한다. */
 	__count_vm_event(PGFREE);
@@ -1451,6 +1472,7 @@ void free_hot_cold_page(struct page *page, int cold)
 
 	pcp = &this_cpu_ptr(zone->pageset)->pcp;
 	/*! 20140315 zone->pageset 의 pcp 값을 local 변수로 가져온다. */
+	/*j zone->pageset 은 per cpu 변수이다. 현재 cpu의 zone->pageset 을 가져와서 pcp 값을 가져온다 */
 	if (cold)
 		list_add_tail(&page->lru, &pcp->lists[migratetype]);
 	else
@@ -2821,13 +2843,33 @@ void __free_pages(struct page *page, unsigned int order)
 {
 	if (put_page_testzero(page)) {
 	/*! 20140315 atomic하게 1을 뺀 값을 저장하고, 그 값이 0이면 true 리턴 */
+	/*j if을 만족하면, page->_count = 0 : page을 사용하고 있는 user가 없다 */
 		if (order == 0)
 			free_hot_cold_page(page, 0);
 			/*! 20140329 pcp->lists[migratetypes]의 앞에 page를 추가한다. */
+			/*j order 0의 page는 buddy list에 바로 반환되지 않고, 먼저 per cpu zone->pageset의 pcp.list에 추가된다.
+			 *  => kernel내부적으로 order 0의 page 할당을 많이 하기 때문에 cache용도로 사용하는 것 같음 (메모리 할당 속도 올리기 위해)
+			 *		page->flags = section|zone|하위 NR_PAGEFLAGS(21) bit clear
+			 *		page->mapping = NULL
+			 *		page->index = migratetype		
+			 *		page->_mapcount = -1
+			 *		page->_count = 0
+			 *		page->lru : this_cpu_ptr(zone->pageset)->pcp.lists[migratetype] 에 연결됨
+			 *		page->private = 0
+			 */									
 		else
 			__free_pages_ok(page, order);
 			/*! 20140322 초기화 시 boot_mem block을 이 함수를 이용하여 buddy로 변환한다.  */
 			/*! 20140322 여기까지 스터디 */
+			/*j free page가 buddy list에 추가된 경우, 아래와 같이 설정됨
+			 *		page->flags = section|zone|하위 NR_PAGEFLAGS(21) bit clear
+			 *		page->mapping = NULL
+			 *		page->index = migratetype		
+			 *		page->_mapcount = PAGE_BUDDY_MAPCOUNT_VALUE(-128)	
+			 *		page->_count = 0
+			 *		page->lru : zone->free_area[order].free_list[migratetype] 에 연결됨
+			 *		page->private = order
+			 */
 	}
 	/*! 20140329 buddy의 free page함수이고, 작은 page는 다르게 처리한다. */
 }
@@ -6200,6 +6242,7 @@ static inline unsigned long *get_pageblock_bitmap(struct zone *zone,
 #ifdef CONFIG_SPARSEMEM
 	return __pfn_to_section(pfn)->pageblock_flags;
 	/*! 20131214 mem_section->pageblock_flags를 반환한다. */
+	/*j sparse_init_one_section() 에서 ms->pageblock_flags = pageblock_bitmap 으로 설정함 */
 #else
 	return zone->pageblock_flags;
 #endif /* CONFIG_SPARSEMEM */

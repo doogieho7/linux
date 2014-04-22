@@ -694,6 +694,8 @@ static void __init free_highpages(void)
 		if (start < max_low)
 			start = max_low;
 
+		/*j 여기까지오면, start = highem시작 pfn */
+
 		/* Find and exclude any reserved regions */
 		for_each_memblock(reserved, res) {
 		/*! 20140329 for (res = memblock.reserved.regions;
@@ -751,6 +753,10 @@ void __init mem_init(void)
 	 * PHYS_PFN_OFFSET: 0x00020000
 	 * mem_map: 0 (TODO: 맞는값인지 추후 확인 필요!!)
 	 * max_mapnr: 전체 물리 page의 개수
+	 */
+	/*j CONFIG_FLATMEM일때는 아래와 같이 pfn -> page 주소로 변환되는데, 
+	 *  여기서 -mem_map을 하게 되면 struct page의 max 개수가 나옴 
+		#define __pfn_to_page(pfn)	(mem_map + ((pfn) - ARCH_PFN_OFFSET))
 	 */
 
 	/* this will put all unused low memory onto the freelists */

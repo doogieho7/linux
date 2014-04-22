@@ -882,6 +882,10 @@ static inline int PageAnon(struct page *page)
 {
 	return ((unsigned long)page->mapping & PAGE_MAPPING_ANON) != 0;
 	/*! 20140315 PAGE_MAPPING_ANON: 1 (ANON: heap, stack에 할당되는 커널 페이지) */
+	/*j page->mapping의 하위 2bit는 PAGE_MAPPING_FLAGS로 사용됨 
+	 *  LSB : 0 -> inode address_space을 가르키고,
+	 *  LSB : 1(PAGE_MAPPING_ANON) -> anon_vma 객체를 가르킴
+	 */ 
 }
 
 /*

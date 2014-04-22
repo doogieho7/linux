@@ -47,6 +47,16 @@ static inline void __count_vm_events(enum vm_event_item item, long delta)
 	 * => *__this_cpu_ptr(&vm_event_states.event[item]) += delta
 	 * 현재 this cpu의 vm_event_states.event 값에 delta를 더하는 것
 	 */
+	/*j __pcpu_size_call(__this_cpu_add_, (vm_event_states.event[item], delta)
+	 * => __this_cpu_add_4(vm_event_states.event[item], delta)
+	 * => __this_cpu_generic_to_op(vm_event_states.event[item], delta, +=)
+	 * => *__this_cpu_ptr(&vm_event_states.event[item]) += delta
+	 * => *SHIFT_PERCPU_PTR(&vm_event_states.event[item], __my_cpu_offset()) += delta
+	 * => *RELOC_HIDE(&vm_event_states.event[item], __my_cpu_offset()) += delta
+	 * => *({ unsigned long __ptr;
+	 *		 __ptr = (unsigned long)(&vm_event_states.event[item]);
+	 *		 (unsigned long *)(__ptr + __my_cpu_offset()); }) += delta
+	 */
 }
 
 static inline void count_vm_events(enum vm_event_item item, long delta)
