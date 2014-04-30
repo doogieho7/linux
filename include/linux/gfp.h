@@ -298,6 +298,11 @@ static inline enum zone_type gfp_zone(gfp_t flags)
     /*! 20140208 (falgs & 0x0f) 에 해당하는 것이 GFP_ZONE_BAD에 해당하면 BUG 발생 */
 	VM_BUG_ON((GFP_ZONE_BAD >> bit) & 1);
 	return z;
+
+	/*j gfp_t flags에 따라 zone_type 을 계산하여 리턴한다
+	 *  __GFP_HIGHMEM -> ZONE_HIGHMEM = 1 (enum zone_type) 
+	 *  없을 경우     -> ZONE_NORMAL = 0 (enum zone_type)
+	 */
 }
 
 /*
@@ -330,6 +335,7 @@ static inline struct zonelist *node_zonelist(int nid, gfp_t flags)
 {
 	return NODE_DATA(nid)->node_zonelists + gfp_zonelist(flags);
 	/*! 20140215 gfp_zonelist(flags): 0 이므로 NODE_DATA(nid)->node_zonelists 리턴 */
+	/*j &contig_page_data.node_zonelists[0] 리턴 */
 }
 
 #ifndef HAVE_ARCH_FREE_PAGE

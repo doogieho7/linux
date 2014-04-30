@@ -46,8 +46,7 @@ enum {
 #ifdef CONFIG_CMA
 	/*
 	 * MIGRATE_CMA migration type is designed to mimic the way
-	 * ZONE_MOVABLE works.  Only movable pages can be allocated
-	 * from MIGRATE_CMA pageblocks and page allocator never
+	 * ZONE_MOVABLE works.  Only movable pages can be allocated * from MIGRATE_CMA pageblocks and page allocator never
 	 * implicitly change migration type of MIGRATE_CMA pageblock.
 	 *
 	 * The way to use it is to change migratetype of a range of

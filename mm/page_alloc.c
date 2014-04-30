@@ -934,9 +934,14 @@ static inline void expand(struct zone *zone, struct page *page,
 	 * size: 할당받은 buddy의 크기(page 갯수)
 	 */
 	while (high > low) {
+		/*j 요청된 것보다 더 큰 order의 메모리가 할당되었기 때문에,
+		 *  나머지는 buddy에 다시 추가해야함. 
+		 *  => 할당된 메모리를 반으로 잘랐을 경우, 뒤쪽 부분을 buddy에 다시 추가 
+		 */
 		area--;
 		high--;
 		size >>= 1;
+		/*j high-1 order의 free_area을 가르킨다. */
 		VM_BUG_ON(bad_range(zone, &page[size]));
 
 #ifdef CONFIG_DEBUG_PAGEALLOC
@@ -1040,6 +1045,9 @@ struct page *__rmqueue_smallest(struct zone *zone, unsigned int order,
 		page = list_entry(area->free_list[migratetype].next,
 							struct page, lru);
 		list_del(&page->lru);
+		/*j free_list[migratetype]의 첫번째 entry(struct page)을 가져와서 list에서 제거 
+		 *  => free_list[migratetype]은 struct page.lru 을 사용하여 연결된다 
+		 */
 		rmv_page_order(page);
 		area->nr_free--;
 		expand(zone, page, order, current_order, area, migratetype);
@@ -1683,12 +1691,25 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
 	int cold = !!(gfp_flags & __GFP_COLD);
 	/*! 20140412 cold: 0 */
 
+	/*j migratetype
+	 *   - allocflags_to_migratetype(gfp_mask)함수에서 값을 리턴한다
+	 *	   => __GFP_MOVABLE, __GFP_RECLAIMABLE flage 체크
+	 *   - MIGRATE_XXXXX 값을 가진다 (include/linux/mmzone.h enum 참고)
+	 *   
+	 *   1) MIGRATE_RECLAIMABLE : __GFP_RECLAIMABLE 만 설정된 경우
+	 *   2) MIGRATE_MOVABLE : __GFP_MOVABLE 만 설정된 경우
+	 *   3) MIGRATE_PCPTYPES : __GFP_MOVABLE & __GFP_RECLAIMABLE 두개다 설정된 경우
+	 */
 again:
 	if (likely(order == 0)) {
+		/*j order 0에 대해서는 per_cpu_pages에서 할당한다 */
 		struct per_cpu_pages *pcp;
 		struct list_head *list;
 
 		local_irq_save(flags);
+		/*j local irq만 disable하고,  spinlock 획득하지 않음 => 성능상의 이점
+		 * 아래 else문을 보면, order >= 1일 경우는 zone->lock 스핀락을 획득한다.
+		 */
 		pcp = &this_cpu_ptr(zone->pageset)->pcp;
 		list = &pcp->lists[migratetype];
 		if (list_empty(list)) {
@@ -1706,6 +1727,9 @@ again:
 		else
 			page = list_entry(list->next, struct page, lru);
 		/*! 20140419 lru를 주고 lru를 포함하는 page struct의 시작주소를 가져온다. */
+		/*j cold == 1이면, list의 마지막 entry,
+		 *  cold == 0이면, list의 첫번째 entry을 가져온다
+		 */
 
 		list_del(&page->lru);
 		pcp->count--;
@@ -1855,6 +1879,8 @@ static bool __zone_watermark_ok(struct zone *z, int order, unsigned long mark,
 #endif
 
 	if (free_pages - free_cma <= min + lowmem_reserve)
+	/*j CONFIG_CMA 설정되지 않음 -> free_cma = 0 
+	 *  free_pages가 watermark + lowmem_reserve 보다 작거나 같으면 false */
 		return false;
 	for (o = 0; o < order; o++) {
 		/* At the next order, this order's pages become unavailable */
@@ -2073,6 +2099,13 @@ get_page_from_freelist(gfp_t gfp_mask, nodemask_t *nodemask, unsigned int order,
 
 	classzone_idx = zone_idx(preferred_zone);
 	/*! 20140412 preferred_zone의 index를 가져온다.  */
+	/*j ※ preferred_zone 
+	 *      - __alloc_pages_nodemask()에서 first_zones_zonelist(zonelist, high_zoneidx, &preferred_zone)함수에서 값을 채워준다    
+	 *       1) high_zoneidx = 1(highmem),
+	 *          preferred_zone : highmem zone을 가르킨다.(&contig_page_data.node_zones[1])
+	 *       2) high_zoneidx = 0(normal)
+	 *			preferred_zone : normal zone을 가르킨다. (&contig_page_data.node_zones[0]
+	 */
 zonelist_scan:
 	/*
 	 * Scan zonelist, looking for a zone with enough free.
@@ -2085,6 +2118,18 @@ zonelist_scan:
 	 *	zone;
 	 *	z = next_zones_zonelist(++z, highidx, nodemask, &zone))
 	 */
+	/*j zonelist을 순환하는데, zoneidx <= high_zoneidx 을 만족하는 zone만 순환하고,
+	 *  highidx값에 따라 아래와 같은 zoneidx 순서로 순환한다
+	 *   1) highidx = 1(highmem),
+	 *		zoneidx : 1 -> 0 순서로 순환,
+	 *	 2) highidx = 0(normal)
+	 *	    zoneidx : 0 순환
+	 *
+	 *	※ high_zoneidx
+	 *	    - alloc_page()함수 인자인 gfp_mask에서 가져온 zone_type이다.
+	 *		1) __GFP_HIGHMEM 설정된 경우 : high_zoneidx = ZONE_HIGHMEM(1)
+	 *		2) 설정된게 없는 경우        : high_zoneidx = ZONE_NORMAL(0)
+	 */
 		/*! 20140412 IS_ENABLED(CONFIG_NUMA): 0 */
 		if (IS_ENABLED(CONFIG_NUMA) && zlc_active &&
 			!zlc_zone_worth_trying(zonelist, z, allowednodes))
@@ -2093,6 +2138,8 @@ zonelist_scan:
 		if ((alloc_flags & ALLOC_CPUSET) &&
 			!cpuset_zone_allowed_softwall(zone, gfp_mask))
 				continue;
+		/*j CONFIG_NUMA가 enable된경우에만 위 2개 if문이 유효하다 */
+
 		/*
 		 * When allocating a page cache page for writing, we
 		 * want to get it from a zone that is within its dirty
@@ -2126,16 +2173,21 @@ zonelist_scan:
 		if ((alloc_flags & ALLOC_WMARK_LOW) &&
 		    (gfp_mask & __GFP_WRITE) && !zone_dirty_ok(zone))
 			goto this_zone_full;
+		/*j TODO : zone_dirty_ok() 추후 확인 필요 */
 
 		BUILD_BUG_ON(ALLOC_NO_WATERMARKS < NR_WMARK);
 		if (!(alloc_flags & ALLOC_NO_WATERMARKS)) {
 			/*! 20140412 이 if문은 실행됨 */
+			/*j alloc_flags에 ALLOC_NO_WATERMARKS 설정되어 있지 않으면 watermark 체크한다 */
 			unsigned long mark;
 			int ret;
 
 			mark = zone->watermark[alloc_flags & ALLOC_WMARK_MASK];
 			/*! 20140412
 			 * zone->watermark 에 어떤 값이 있나? 
+			 */
+			/*j mark = zone->watermark[WMARK_LOW] 
+			 *  : __alloc_pages_nodemask()에서 이함수가 호출될 경우는 alloc_flags = ALLOC_WMARK_LOW 가 설정됨 
 			 */
 			/*! 20140412 현재 order: 0, mark: 0 */
 			if (zone_watermark_ok(zone, order, mark,
@@ -2897,6 +2949,7 @@ retry_cpuset:
 			preferred_zone, migratetype);
 	/*! 20140419 buddy에서 new page를 할당받음 */
 	/*! 20140419 여기까지 스터디함 */
+	/*j 첫번째 메모리 할당 시도시 alloc_flags = ALLOC_WMARK_LOW|ALLOC_CPUSET */
 	if (unlikely(!page)) {
 		/*
 		 * Runtime PM, block IO and its error handling path
