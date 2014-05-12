@@ -1123,11 +1123,13 @@ int move_freepages(struct zone *zone,
 
 		order = page_order(page);
 		/*! 20140419 현재 page의 buddy 에서 사용하는 order를 가져옴 */
+		/*j page가 buddy에 있을 경우, page->private에 order 저장된다 */
 		list_move(&page->lru,
 			  &zone->free_area[order].free_list[migratetype]);
 		/*! 20140419 page->lru를 기존 free_list에서 지우고 새로운 migratetype의 free_list에 추가 */
 		set_freepage_migratetype(page, migratetype);
 		/*! 20140419 해당 page의 migratetype을 새로운 migratetype으로 설정 */
+		/*j page가 buddy에 있을 경우, page->index에 migratetype 저장된다 */
 		page += 1 << order;
 		pages_moved += 1 << order;
 	}
@@ -1360,6 +1362,7 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
 	spin_unlock(&zone->lock);
 	return i;
 	/*! 20140419 i: 할당받은 page 갯수 */
+	/*j __rmqueue()에서 null이 리턴될수 있기 때문에, 요청한(count)개수 보다 적게 할당될 수 있음 */
 }
 
 #ifdef CONFIG_NUMA
@@ -1696,9 +1699,10 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
 	 *	   => __GFP_MOVABLE, __GFP_RECLAIMABLE flage 체크
 	 *   - MIGRATE_XXXXX 값을 가진다 (include/linux/mmzone.h enum 참고)
 	 *   
-	 *   1) MIGRATE_RECLAIMABLE : __GFP_RECLAIMABLE 만 설정된 경우
-	 *   2) MIGRATE_MOVABLE : __GFP_MOVABLE 만 설정된 경우
-	 *   3) MIGRATE_PCPTYPES : __GFP_MOVABLE & __GFP_RECLAIMABLE 두개다 설정된 경우
+	 *	 1) MIGRATE_UNMOVABLE   : 아무것도 설정안된 경우
+	 *   2) MIGRATE_RECLAIMABLE : __GFP_RECLAIMABLE 만 설정된 경우
+	 *   3) MIGRATE_MOVABLE     : __GFP_MOVABLE 만 설정된 경우
+	 *   4) MIGRATE_PCPTYPES    : __GFP_MOVABLE & __GFP_RECLAIMABLE 두개다 설정된 경우
 	 */
 again:
 	if (likely(order == 0)) {

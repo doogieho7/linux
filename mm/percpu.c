@@ -1489,8 +1489,11 @@ static struct pcpu_alloc_info * __init pcpu_build_alloc_info(
 	static int group_cnt[NR_CPUS] __initdata;
 	const size_t static_size = __per_cpu_end - __per_cpu_start;
 	/*! 20140111 static_size : per cpu section의 크기 */
-	/*j vmlinux에서 symbol 확인시 static_size = 0x1D00 (=7424)
-	 * __per_cpu_start = 0xc04be000, __per_cpu_end = 0xc04bfd00
+	/*j percpu setcion 이름 : ".data..percpu"
+	 *	[23] .data..percpu     PROGBITS        c04c3000 4cb000 001d00 00  WA  0   0 64
+	 *
+	 *  static_size = 0x1D00 (=7424)
+	 *  __per_cpu_start = 0xc04be000, __per_cpu_end = 0xc04bfd00
 	 */
 	int nr_groups = 1, nr_units = 0;
 	size_t size_sum, min_unit_size, alloc_size;
@@ -1509,6 +1512,12 @@ static struct pcpu_alloc_info * __init pcpu_build_alloc_info(
 	size_sum = PFN_ALIGN(static_size + reserved_size +
 			    max_t(size_t, dyn_size, PERCPU_DYNAMIC_EARLY_SIZE));
 	/*! 20140111 size_sum: 4096byte 단위로 Page align된 size */
+	/*j static_size : ".data..percpu" section 크기(ex. 0x1d00)
+	 *  reserved_size : PERCPU_MODULE_RESERVE(8K)
+	 *  dyn_size : PERCPU_DYNAMIC_RESERVE(12K)
+	 *  
+	 *  size_sum = PFN_ALIGN(0x1d00 + 8k + 12k) = 0x7000
+	 */
 	dyn_size = size_sum - static_size - reserved_size;
 	/*! 20140111 align으로 증가된 size만큼 dyn_size에 추가함 */
 
