@@ -803,6 +803,7 @@ restart:
 
 			new_alloc = pcpu_need_to_extend(chunk);
 			/*! 20140510 chunk->map_alloc보다 map_used가 더 크면 map_alloc을 2배로 확장한다. */
+			/*j 현재는 map_used = 2이기 때문에, return된 new_alloc = 0 이다 */
 			if (new_alloc) {
 				spin_unlock_irqrestore(&pcpu_lock, flags);
 				if (pcpu_extend_area_map(chunk,
@@ -1335,7 +1336,9 @@ int __init pcpu_setup_first_chunk(const struct pcpu_alloc_info *ai,
 			PCPU_SETUP_BUG_ON(unit_map[cpu] != UINT_MAX);
 
 			unit_map[cpu] = unit + i;
+			/*j cpu번호를 index로 하는 cpu, unit 번호 map */
 			unit_off[cpu] = gi->base_offset + i * ai->unit_size;
+			/*j cpu번호를 index로 하는 cpu, unit offset map */
 
 			/* determine low/high unit_cpu */
 			if (pcpu_low_unit_cpu == NR_CPUS ||
@@ -1804,7 +1807,7 @@ int __init pcpu_embed_first_chunk(size_t reserved_size, size_t dyn_size,
 		base = min(ptr, base);
 		/*! 20140118 할당한 Area의 시작주소 */
 	}
-	/*j base : 각 group을 위해 할단된 space 시작주소 중 가장 낮은 주소을 가르킴 */ 
+	/*j base : 각 group을 위해 할당된 space 시작주소 중 가장 낮은 주소을 가르킴 */ 
 
 	/*
 	 * Copy data and free unused parts.  This should happen after all
@@ -1837,6 +1840,9 @@ int __init pcpu_embed_first_chunk(size_t reserved_size, size_t dyn_size,
 	max_distance = 0;
 	for (group = 0; group < ai->nr_groups; group++) {
 		ai->groups[group].base_offset = areas[group] - base;
+		/*j struct pcpu_group_info.base_offset : 현재 group을 위해 할당된 space의 base로부터 offset
+		 *	  base : 각 group을 위해 할당된 space중 가장낮은 space의 시작 주소
+		 */
 		max_distance = max_t(size_t, max_distance,
 				     ai->groups[group].base_offset);
 	}
