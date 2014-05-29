@@ -254,6 +254,7 @@ static unsigned long pcpu_chunk_addr(struct pcpu_chunk *chunk,
 	 * base + pcpu_uint_offset 하면 어떤 CPU 인지 선택하는 것이고,
 	 * offset으로 위치를 찾아서 size만큼 초기화한다.
 	 */
+	/*j chunk->base_addr + pcpu_unit_offsets[cpu] : cpu에 대한 pcpu 공간의 시작 주소 */
 }
 
 static void __maybe_unused pcpu_next_unpop(struct pcpu_chunk *chunk,

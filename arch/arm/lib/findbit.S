@@ -117,14 +117,17 @@ ENTRY(_find_next_bit_le)
 		 * byte offset = 0b10 = 2, bit offset = 0b010 = 2
 		 * 2번째 byte의 2번째 bit 즉 18번째 bit를 찾는다.
 		 * 18번째 bit부터 1이 설정되어 있는 bit를 찾는다.
-		 */
 
 		/*! 20140104 r0 에서 byte offset 만큼 떨어진 위치의 1byte를 읽어옴 */
  ARM(		ldrb	r3, [r0, r2, lsr #3]	)
+		/*j r0(char *addr)로 가정하면, r2 >> 3 = 배열의 index
+		 *  r3 = addr[offset >> 3]
+		 */
  THUMB(		lsr	r3, r2, #3		)
  THUMB(		ldrb	r3, [r0, r3]		)
 		/*! 20140104 r3 = r3 >> ip(=bit offset), 1을 찾을때까지 루프 */
 		movs	r3, r3, lsr ip		@ shift off unused bits
+		/*j ip = offset & 7 = 하위 3bit */
 		bne	.L_found
 		/*! 20140104
 		 * 7을 or 연산함으로써 다음 Byte를 가리키게 함
