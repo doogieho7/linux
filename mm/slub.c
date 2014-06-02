@@ -1586,8 +1586,7 @@ static inline void *acquire_slab(struct kmem_cache *s,
 	unsigned long counters;
 	struct page new;
 
-	/*! 20140517 현재 아래와 같은 인자로 호출되었다.
-	*/
+	/*! 20140517 현재 아래와 같은 인자로 호출되었다. */
 
 	/*
 	 * Zap the freelist and set the frozen bit.
@@ -1600,11 +1599,16 @@ static inline void *acquire_slab(struct kmem_cache *s,
 	 *  page->freelist는 할당된 slab 공간의 첫번째 free object을 가르킨다.
 	 *  page->counters = NULL
 	 */
+	/*j page->counters 변수는 inuse(16), object(15), frozen(1)과 union 이다 */
 	new.counters = counters;
 	*objects = new.objects - new.inuse;
 	/*! 20140517 현재 counters = 0이라서, *objects = 0으로 설정됨
 	 *  struct page의 cocunters와 objects, inuse는 union type이라서,
 	 *  new.counters 값을 설정하면 new.objects, new.inuse 값이 설정됨 
+	 */
+	/*j	new.objects : slab의 object 총개수
+	 *  new.inuse : 현재 사용중이 object 개수
+	 *  *object = new.objects - new.inuse : free object 개수
 	 */
 	if (mode) {
 		new.inuse = page->objects;
@@ -1685,7 +1689,11 @@ static void *get_partial_node(struct kmem_cache *s, struct kmem_cache_node *n,
 		/*! 20140524 n->partial로 부터 page slab을 제거하고 freelist pointer을 리턴한다
 		 * 최초 호출시 object = NULL, 리턴된 objects = 0 이다
 		 */
+		/*j objects : node의 partial list로부터 제거된 slab의 free object 총개수
+		 *  list 첫번재 순환시 object = NULL,
+		 *  list 두번째 이후부터는 object 는 값을 가진다. */
 		if (!t)
+			/*j partial list에 있는 slab이 full인 경우 t가 null일 수 있다 */
 			break;
 
 		available += objects;
@@ -2530,6 +2538,11 @@ redo:
 
 	object = c->freelist;
 	page = c->page;
+	/*j 1. cpu_slab 설정되지 않은 경우, 
+	 *		c->freelist = NULL, c->page = NULL
+	 *	2. slab의 마지막 object가 alloc된 경우 
+	 *		c->freelist = NULL, c->page = slab page
+	 */
 	if (unlikely(!object || !page || !node_match(page, node)))
 		/*! 20140517 object 또는 page가 null이면 이쪽 실행 */
 		object = __slab_alloc(s, gfpflags, node, addr, c);
@@ -2540,6 +2553,9 @@ redo:
 		 */
 	else {
 		/*! 20140524 cpu_slab이 초기화 된경우 여기 들어옴 */
+		/*j 여기에 들어오면, cpu_slab에 free object가 있는 경우이다,
+		 *  따라서, cpu_slab에서 object 할당한다 (fastpath)
+		 */
 		void *next_object = get_freepointer_safe(s, object);
 
 		/*
