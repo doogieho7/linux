@@ -459,6 +459,7 @@ void __init create_kmalloc_caches(unsigned long flags)
 	/*! 20140531 size_index 를 KMALLOC_MIN_SIZE에 맞게 재설정한다. */
 	for (i = KMALLOC_SHIFT_LOW; i <= KMALLOC_SHIFT_HIGH; i++) {
 		/*! 20140531 KMALLOC_SHIFT_LOW: 3, KMALLOC_SHIFT_HIGH: 13 */
+		/*j KMALLOC_SHIFT_LOW: 6, KMALLOC_SHIFT_HIGH: 13 */
 		if (!kmalloc_caches[i]) {
 			kmalloc_caches[i] = create_kmalloc_cache(NULL,
 							1 << i, flags);

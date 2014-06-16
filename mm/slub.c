@@ -1507,6 +1507,9 @@ static void __free_slab(struct kmem_cache *s, struct page *page)
 	/*! 20140531 아무것도 안함 */
 	page_mapcount_reset(page);
 	/*! 20140531 page->_mapcount->counter 값을 -1로 초기화. slab으로 안쓰겠다는 것 */
+	/*j _mapcount와 'inuse,objects,frozen'은 union 이다. 
+	 * _mapcount = -1로 초기화 하는 이유는 buddy에 반납하기 위해서 일듯
+	 */
 	if (current->reclaim_state)
 		/*! 20140531 현재 task의 reclaim_state가 있는 경우 실행 */
 		current->reclaim_state->reclaimed_slab += pages;
@@ -1985,9 +1988,11 @@ redo:
 
 	if (!new.inuse && n->nr_partial > s->min_partial)
 		/*! 20140531 사용가능한 object가 없고 현재 partial의 갯수가 최소 partial 갯수보다 큰 경우 */
+		/*j inuse == 0 -> 사용중이 object가 없다는 의미, 즉 현재 slab free가능한 상태 - FREE 상태 */
 		m = M_FREE;
 	else if (new.freelist) {
 		/*! 20140531 new.freelist가 NULL이 아닌 경우 */
+		/*j 사용중인 object가 있지만, freelist도 있음 - PARTIAL 상태 */
 		m = M_PARTIAL;
 		if (!lock) {
 			lock = 1;
@@ -1999,6 +2004,7 @@ redo:
 			spin_lock(&n->list_lock);
 		}
 	} else {
+		/*j free object가 없는 상태 - FULL 상태 */
 		m = M_FULL;
 		if (kmem_cache_debug(s) && !lock) {
 			lock = 1;
@@ -2011,13 +2017,20 @@ redo:
 		}
 	}
 
+	/*j l = M_NONE 초기값이고, 아래 __cmpxchg_double_slab 실패할 경우
+	 *  redo 다시 할때 M_PARTIAL, M_FULL을 가질수 있다.
+	 */
 	if (l != m) {
 
 		if (l == M_PARTIAL)
+		/*j m == M_PARTIAL 조건에 의해 add_partial() 실행되어 
+		 *  node의 partial list에 추가된 상태 
+		 */
 
 			remove_partial(n, page);
 
 		else if (l == M_FULL)
+		/*j m == M_FULL 조건에 의해 add_full() 실행되었음 */
 
 			remove_full(s, page);
 
@@ -2025,6 +2038,9 @@ redo:
 
 			add_partial(n, page, tail);
 			/*! 20140531 list에 page를 추가 */
+			/*j node의 partial list에 slab(page)을 추가,
+			 *  예를들면, cpu_slab 제거 -> node partial list로 추가 하는 경우 
+			 */ 
 			stat(s, tail);
 
 		} else if (m == M_FULL) {
@@ -2032,6 +2048,7 @@ redo:
 			stat(s, DEACTIVATE_FULL);
 			add_full(s, n, page);
 			/*! 20140531 CONFIG_SLUB_DEBUG 가 꺼져있으면 아무일도 안함 */
+			/*j CONFIG_SLUB_DEBUG enable되어 있으면, full list을 관리한다 */
 
 		}
 	}
@@ -2106,11 +2123,17 @@ static void unfreeze_partials(struct kmem_cache *s,
 		/*! 20140531 cpu slab의 freelist를 없애고 page slab partial의 freelist로 바꾸기 위한 것으로 추정 */
 
 		if (unlikely(!new.inuse && n->nr_partial > s->min_partial)) {
+		/*j slab이 FREE상태(모든 object가 free)이고, nr_partial > min_partial 보다 크면 */
 			page->next = discard_page;
 			discard_page = page;
+			/*j page을 discard_page list앞에 추가하여 single list을 만든다.
+			 *  discard_page변수는 discard해야할 첫번째 page을 가르키고,
+			 *  다음 page는 page->next 변수에 연결된다.
+			 */
 		} else {
 			add_partial(n, page, DEACTIVATE_TO_TAIL);
 			/*! 20140531 cpu_slab의 partial을 node의 partial에 추가한다. */
+			/*j n의 partial list tail에 slab(page)을 추가한다 */
 			stat(s, FREE_ADD_PARTIAL);
 		}
 	}
@@ -2128,6 +2151,7 @@ static void unfreeze_partials(struct kmem_cache *s,
 		stat(s, FREE_SLAB);
 	}
 	/*! 20140531 위에서 discard_page로 체크된 page를 buddy 시스템에 반환 */
+	/*j discard_page list의 page을 free(buddy로 반환) */
 #endif
 }
 
@@ -2187,6 +2211,14 @@ static inline void flush_slab(struct kmem_cache *s, struct kmem_cache_cpu *c)
 	stat(s, CPUSLAB_FLUSH);
 	deactivate_slab(s, c->page, c->freelist);
 	/*! 20140531 cpu slab을 제거하여 buddy에 추가한다. */
+	/*j cpu_slab의 free object을 page의 freelist로 back하고,
+	 *  (page->freelist : next free object 가르키도록 설정), 
+	 *  
+	 *  cpu_slab이 
+	 *   1) PARTIAL 인경우 : node의 partial list에 추가
+	 *   2) FULL 인경우 : 아무것도 안함 (if CONFIG_SLUB_DEBU enabled -> full list에 추가)
+	 *   3) FREE 인경우(inuse == 0) : buddy 로 반환 
+	 */
 
 	c->tid = next_tid(c->tid);
 	c->page = NULL;
@@ -2208,9 +2240,18 @@ static inline void __flush_cpu_slab(struct kmem_cache *s, int cpu)
 		if (c->page)
 			flush_slab(s, c);
 		/*! 20140531 현재 cpu_slab과 page가 있으면 해당 slab을 제거 */
+		/*j cpu_slab의 page(slab)을 flush하고, cpu_slab에서 제거 
+		 *	 1) PARTIAL : node의 partial list에 추가
+		 *	 2) FULL : 아무것도 안함
+		 *	 3) FREE : buddy로 반환
+		 */
 
 		unfreeze_partials(s, c);
 		/*! 20140531 cpu_slab의 partial page를 slab에서 제거 */
+		/*j cpu_slab의 partial page 모두를 unfreeze
+		 *	 1) PARTIAL : node의 partial list에 추가
+		 *	 2) FREE : buddy로 반환
+		 */
 	}
 }
 
