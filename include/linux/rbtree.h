@@ -80,10 +80,18 @@ static inline void rb_link_node(struct rb_node * node, struct rb_node * parent,
 {
 	node->__rb_parent_color = (unsigned long)parent;
 	/*! 20140607 __rb_parent_color는 주소정보와 하위1bit로 색깔을 나타낸다.  */
+	/*j parent | RB_RED 설정 (insert되는 node는 무조건 red이다 - RB Tree 규칙) 
+	 *  하위 2bit : color 
+	 *		#define	RB_RED		0
+	 *		#define	RB_BLACK	1
+	 */
 	node->rb_left = node->rb_right = NULL;
 
 	*rb_link = node;
 	/*! 20140607 rb_node 초기화 */
+	/*j rb_link는 parent의 rb_left or rb_right 변수를 가르킨다.
+	 *  즉, parent의 left or right에 node을 연결시킨다.
+	 */
 }
 
 #endif	/* _LINUX_RBTREE_H */

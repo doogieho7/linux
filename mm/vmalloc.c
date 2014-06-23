@@ -273,6 +273,7 @@ static DEFINE_SPINLOCK(vmap_area_lock);
 /* Export for kexec only */
 LIST_HEAD(vmap_area_list);
 static struct rb_root vmap_area_root = RB_ROOT;
+/*j vmap_area의 RB tree root */
 
 /* The vmap cache globals are protected by vmap_area_lock */
 static struct rb_node *free_vmap_cache;
@@ -322,11 +323,18 @@ static void __insert_vmap_area(struct vmap_area *va)
 			BUG();
 		/*! 20140607 start와 end가 역순으로 되거나 overflow되는 경우에 bug */
 	}
+	/*j root node가 있다면, binary search로 va가 들어갈 위치를 찾는다
+	 *  => p(struct rb_node **)는 parent의 rb_lef or rb_right 변수를 가르킨다 
+	 */ 
 
 	rb_link_node(&va->rb_node, parent, p);
 	/*! 20140607 rb_node 초기화하여 연결시킴 */
+	/*j va을 parent node의 rb_left or rb_right에 연결시킴 */
 	rb_insert_color(&va->rb_node, &vmap_area_root);
 	/*! 20140614 rbtree 이용하여 node insert 함 */
+	/*j rb tree 규칙을 만족시키기 위해 트리를 바로 잡아 준다. ex) rotate or color change 등 
+	 *  => rb_inser_color()가 rb tree의 핵심 함수다 
+	 */
 
 	/* address-sort this list */
 	tmp = rb_prev(&va->rb_node);
@@ -1213,9 +1221,11 @@ void __init vmalloc_init(void)
 		 * p->wq->func: free_work
 		 */
 	}
+	/*j vmap_block_queue, vfree_defeered 는 cpu별로 존재 - percpu 변수 */ 
 
 	/* Import existing vmlist entries. */
 	for (tmp = vmlist; tmp; tmp = tmp->next) {
+		/*j static struct vm_struct *vmlist; */
 		va = kzalloc(sizeof(struct vmap_area), GFP_NOWAIT);
 		va->flags = VM_VM_AREA;
 		va->va_start = (unsigned long)tmp->addr;

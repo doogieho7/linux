@@ -52,6 +52,9 @@ static inline void rb_set_black(struct rb_node *rb)
 static inline struct rb_node *rb_red_parent(struct rb_node *red)
 {
 	return (struct rb_node *)red->__rb_parent_color;
+	/*j node가 red color일 경우 parent 주소 리턴
+	 *  RB_RED: 0이기 때문에 하위 2bit clear할 필요 없음 
+	 */
 }
 
 /*
@@ -96,11 +99,16 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 			break;
 			/*! 20140614 parent가 black이면 더이상 변경 없이 종료 */
 
+		/*j 여기까지오면, parent의 color는 red이다. */
+
 		gparent = rb_red_parent(parent);
 
 		tmp = gparent->rb_right;
 		/*! 20140614 tmp는 uncle */
 		if (parent != tmp) {	/* parent == gparent->rb_left */
+			/*j parent는 gparent의 왼쪽 자식이고,
+			 *  tmp(uncle)는 gparent의 오른쪽 자식이다.
+			 */
 			if (tmp && rb_is_red(tmp)) {
 			/*! 20140614 uncle과 parant가 red일때 */
 				/*
