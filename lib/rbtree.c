@@ -99,7 +99,7 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 			break;
 			/*! 20140614 parent가 black이면 더이상 변경 없이 종료 */
 
-		/*j 여기까지오면, parent의 color는 red이다. */
+		/*j 여기까지오면, parent의 color는 RED */
 
 		gparent = rb_red_parent(parent);
 
@@ -107,7 +107,7 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 		/*! 20140614 tmp는 uncle */
 		if (parent != tmp) {	/* parent == gparent->rb_left */
 			/*j parent는 gparent의 왼쪽 자식이고,
-			 *  tmp(uncle)는 gparent의 오른쪽 자식이다.
+			 *  uncle(tmp)는 gparent의 오른쪽 자식이다.
 			 */
 			if (tmp && rb_is_red(tmp)) {
 			/*! 20140614 uncle과 parant가 red일때 */
@@ -130,7 +130,7 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 				node = gparent;
 				parent = rb_parent(node);
 				rb_set_parent_color(node, parent, RB_RED);
-				/*! 20140614 gparent는 red로 바꾸어주고, 현재node를 parent로 설정하여 계속. */
+				/*! 20140614 gparent는 red로 바꾸어주고, 현재node를 gparent로 설정하여 계속. */
 				continue;
 			}
 
@@ -152,11 +152,18 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 				 * continuation into Case 3 will fix that.
 				 */
 				parent->rb_right = tmp = node->rb_left;
+				/*j node의 왼쪽자식을 parent의 오른쪽 자식으로 
+				 *  현재 node는 p의 오른쪽 자식이기 때문에, node->left > p 이다 
+				 */
 				node->rb_left = parent;
+				/*j parent을 node의 왼쪽자식으로 (위 그림 참고) */
 				if (tmp)
 					rb_set_parent_color(tmp, parent,
 							    RB_BLACK);
+					/*j temp(node의 왼쪽자식)의 부모를 parent로 설정, color는 BLACK */
 				rb_set_parent_color(parent, node, RB_RED);
+				/*j parent의 부모를 node로 설정 */
+				/*j 여기까지가, parent을 왼쪽으로 회전시키는 과정 */
 				augment_rotate(parent, node);
 				/*! 20140614 augment_rotate: 현재 dummy_rotate 로 설정되어 아무일도 안함 */
 				parent = node;
@@ -164,6 +171,13 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 				/*! 20140614 right node와 parent를 left rotate 시킨다. */
 				/*! 20140614 case 2의 경우는 case 3로 가서 회전을 1번 더 한다. */
 			}
+
+			/*j 여기까지 오면 
+			 *  gparent->color = BLACK
+			 *  parent = gparent->left, parent->color = RED,
+			 *  uncle = gparent->right, uncle->color = BLACK
+			 *  (아래 그림 참고) 
+			 */
 
 			/*
 			 * Case 3 - right rotate at gparent
@@ -179,22 +193,31 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 			parent->rb_right = gparent;
 			/*! 20140614 gparent 기준으로 right rotate */
 			if (tmp)
+				/*j tmp = parent->right */
 				rb_set_parent_color(tmp, gparent, RB_BLACK);
 			/*! 20140614 p의 자식이 있을 경우 검은색으로 변환*/
 			__rb_rotate_set_parents(gparent, parent, root, RB_RED);
 			/*! 20140614 회전한 g의 색깔을 붉은색으로 설정 */
+			/*j gparent의 부모와 색상을 parent에 설정하고,
+			 *  gparent->parent = parent;
+			 *  gparent->color = RB_RED
+			 */
 			augment_rotate(gparent, parent);
 			/*! 20140614 augment_rotate: 현재 dummy_rotate 로 설정되어 아무일도 안함 */
 			break;
-		} else {
+		} else { /*j parent == gparent->rb_right */
 			/*! 20140614 node가 gparent의 right인 경우 위의 동작과 대칭 */
 			tmp = gparent->rb_left;
+			/*j tmp는 uncle */
+			/*j 여기까지 오면, parent의 color는 RED */
 			if (tmp && rb_is_red(tmp)) {
+				/*j parent, uncle 모두 RED 일때 */
+
 				/* Case 1 - color flips */
-				/*
+				/*j
 				 *       G            g
 				 *      / \          / \
-				 *     p   u  -->   P   U
+				 *     u   p  -->   U   P
 				 *                       \
 				 *                        n
 				 */
@@ -204,11 +227,24 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 				parent = rb_parent(node);
 				rb_set_parent_color(node, parent, RB_RED);
 				continue;
+				/*j parent, uncle 모두 RED 이고, gparent는 BLACK 일때,
+				 *  color flips:
+				 *	 1) parent, uncle 색상 BLACK 로 설정
+				 *	 2) gparent 색상 RED 로 설정
+				 *	 3) current node = gparent 설정하고 계속
+				 */
 			}
 
 			tmp = parent->rb_left;
 			if (node == tmp) {
 				/* Case 2 - right rotate at parent */
+				/*j
+				 *      G             G
+				 *     / \           / \
+				 *    U   p  -->    U   n
+				 *       /               \
+				 *      n                 p 
+				 */
 				parent->rb_left = tmp = node->rb_right;
 				node->rb_right = parent;
 				if (tmp)
@@ -221,11 +257,22 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 			}
 
 			/* Case 3 - left rotate at gparent */
+			/*j
+			 *        G           P
+			 *       / \         / \
+			 *      U   p  -->  g   n
+			 *           \     /     
+			 *            n   U        
+			 */
 			gparent->rb_right = tmp;  /* == parent->rb_left */
 			parent->rb_left = gparent;
 			if (tmp)
 				rb_set_parent_color(tmp, gparent, RB_BLACK);
 			__rb_rotate_set_parents(gparent, parent, root, RB_RED);
+			/*j gparent의 부모와 색상을 parent에 설정하고,
+			 *  gparent->parent = parent;
+			 *  gparent->color = RB_RED
+			 */
 			augment_rotate(gparent, parent);
 			break;
 		}
