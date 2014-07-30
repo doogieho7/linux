@@ -214,7 +214,7 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 				/*j parent, uncle 모두 RED 일때 */
 
 				/* Case 1 - color flips */
-				/*j
+				/*! 20140614 소문자: red, 대문자: BLACK
 				 *       G            g
 				 *      / \          / \
 				 *     u   p  -->   U   P
@@ -238,7 +238,8 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 			tmp = parent->rb_left;
 			if (node == tmp) {
 				/* Case 2 - right rotate at parent */
-				/*j
+				/*! 20140614
+				 *
 				 *      G             G
 				 *     / \           / \
 				 *    U   p  -->    U   n
@@ -257,7 +258,8 @@ __rb_insert(struct rb_node *node, struct rb_root *root,
 			}
 
 			/* Case 3 - left rotate at gparent */
-			/*j
+			/*! 20140614
+			 *
 			 *        G           P
 			 *       / \         / \
 			 *      U   p  -->  g   n
